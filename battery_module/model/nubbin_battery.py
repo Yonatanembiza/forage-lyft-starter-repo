@@ -1,5 +1,3 @@
-
-
 from battery_module.battery import Battery
 
 
