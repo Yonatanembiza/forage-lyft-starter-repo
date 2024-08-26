@@ -1,0 +1,503 @@
+From 50e92cfd9d8e1c8327ea287f12a66f0084fbfe33 Mon Sep 17 00:00:00 2001
+From: Yonatan Embiza Tadesse <enyonathan@gmail.com>
+Date: Mon, 26 Aug 2024 14:42:28 -0500
+Subject: [PATCH] Refactor code to implement new architecture
+
+Reorganized modules and classes to align with the new architecture design. This includes refactoring the existing code based on the Factory and Strategy design patterns to enhance readability, understandability, testability, scalability, and maintainability.
+---
+ battery_module/battery.py                |  6 ++
+ battery_module/model/nubbin_battery.py   | 12 ++++
+ battery_module/model/spindler_battery.py | 11 +++
+ car.py                                   | 10 ---
+ car_module/car.py                        | 13 ++++
+ car_module/car_fcatory.py                | 88 ++++++++++++++++++++++++
+ engine/__init__.py                       |  0
+ engine/capulet_engine.py                 | 13 ----
+ engine/model/__init__.py                 |  0
+ engine/model/calliope.py                 | 12 ----
+ engine/model/glissade.py                 | 12 ----
+ engine/model/palindrome.py               | 12 ----
+ engine/model/rorschach.py                | 12 ----
+ engine/model/thovex.py                   | 12 ----
+ engine/sternman_engine.py                | 15 ----
+ engine/willoughby_engine.py              | 13 ----
+ engine_module/engine.py                  |  6 ++
+ engine_module/model/capulet_engine.py    | 10 +++
+ engine_module/model/sternman_engine.py   |  9 +++
+ engine_module/model/willoughby_engine.py |  9 +++
+ service_module/serviceable.py            |  7 ++
+ test_main.py                             | 31 +++++++++
+ 22 files changed, 202 insertions(+), 111 deletions(-)
+ create mode 100644 battery_module/battery.py
+ create mode 100644 battery_module/model/nubbin_battery.py
+ create mode 100644 battery_module/model/spindler_battery.py
+ delete mode 100644 car.py
+ create mode 100644 car_module/car.py
+ create mode 100644 car_module/car_fcatory.py
+ delete mode 100644 engine/__init__.py
+ delete mode 100644 engine/capulet_engine.py
+ delete mode 100644 engine/model/__init__.py
+ delete mode 100644 engine/model/calliope.py
+ delete mode 100644 engine/model/glissade.py
+ delete mode 100644 engine/model/palindrome.py
+ delete mode 100644 engine/model/rorschach.py
+ delete mode 100644 engine/model/thovex.py
+ delete mode 100644 engine/sternman_engine.py
+ delete mode 100644 engine/willoughby_engine.py
+ create mode 100644 engine_module/engine.py
+ create mode 100644 engine_module/model/capulet_engine.py
+ create mode 100644 engine_module/model/sternman_engine.py
+ create mode 100644 engine_module/model/willoughby_engine.py
+ create mode 100644 service_module/serviceable.py
+ create mode 100644 test_main.py
+
+diff --git a/battery_module/battery.py b/battery_module/battery.py
+new file mode 100644
+index 0000000..2549cab
+--- /dev/null
++++ b/battery_module/battery.py
+@@ -0,0 +1,6 @@
++from abc import ABC, abstractmethod
++
++class Battery(ABC):
++    @abstractmethod
++    def needs_service(self):
++        pass
+\ No newline at end of file
+diff --git a/battery_module/model/nubbin_battery.py b/battery_module/model/nubbin_battery.py
+new file mode 100644
+index 0000000..8c86f77
+--- /dev/null
++++ b/battery_module/model/nubbin_battery.py
+@@ -0,0 +1,12 @@
++
++
++from battery_module.battery import Battery
++
++
++class NubbinBattery(Battery):
++    def __init__(self, last_service_date, current_date):
++        self.last_service_date = last_service_date
++        self.current_date = current_date
++
++    def needs_service(self):
++        return self.current_date.year - self.last_service_date.year > 4
+\ No newline at end of file
+diff --git a/battery_module/model/spindler_battery.py b/battery_module/model/spindler_battery.py
+new file mode 100644
+index 0000000..1d790d6
+--- /dev/null
++++ b/battery_module/model/spindler_battery.py
+@@ -0,0 +1,11 @@
++
++from battery_module.battery import Battery
++
++
++class SpindlerBattery(Battery):
++    def __init__(self, last_service_date, current_date):
++        self.last_service_date = last_service_date
++        self.current_date = current_date
++
++    def needs_service(self):
++        return self.current_date.year - self.last_service_date.year > 2
+\ No newline at end of file
+diff --git a/car.py b/car.py
+deleted file mode 100644
+index f7b980a..0000000
+--- a/car.py
++++ /dev/null
+@@ -1,10 +0,0 @@
+-from abc import ABC, abstractmethod
+-
+-
+-class Car(ABC):
+-    def __init__(self, last_service_date):
+-        self.last_service_date = last_service_date
+-
+-    @abstractmethod
+-    def needs_service(self):
+-        pass
+diff --git a/car_module/car.py b/car_module/car.py
+new file mode 100644
+index 0000000..a3aab8c
+--- /dev/null
++++ b/car_module/car.py
+@@ -0,0 +1,13 @@
++
++from battery_module.battery import Battery
++from engine_module.engine import Engine
++from service_module.serviceable import Serviceable
++
++
++class Car(Serviceable):
++    def __init__(self, engine, battery):
++        self.engine = engine
++        self.battery = battery
++
++    def needs_service(self):
++        return self.engine.needs_service() or self.battery.needs_service()
+diff --git a/car_module/car_fcatory.py b/car_module/car_fcatory.py
+new file mode 100644
+index 0000000..04cac39
+--- /dev/null
++++ b/car_module/car_fcatory.py
+@@ -0,0 +1,88 @@
++# from battery_module.model.nubbin_battery import NubbinBattery
++# from battery_module.model.spindler_battery import SpindlerBattery
++# from car_module.car import Car
++# from engine_module.model.capulet_engine import CapuletEngine
++# from engine_module.model.sternman_engine import SternmanEngine
++# from engine_module.model.willoughby_engine import WilloughbyEngine
++
++
++# class CarFactory:
++
++#     @staticmethod
++#     def create_calliope(current_date, last_service_date, current_mileage, last_service_mileage):
++#         engine = CapuletEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++#         battery = SpindlerBattery(last_service_date=last_service_date, current_date=current_date)
++
++#         return Car(engine=engine, battery=battery)
++
++#     @staticmethod
++#     def create_glissade(current_date, last_service_date, current_mileage, last_service_mileage):
++#         engine = WilloughbyEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++#         battery = SpindlerBattery(last_service_date=last_service_date, current_date=current_date)
++
++#         return Car(engine=engine, battery=battery)
++
++#     @staticmethod
++#     def create_palindrome(current_date, last_service_date, warning_light_on):
++#         engine = SternmanEngine(warning_light_on=warning_light_on)
++#         battery = SpindlerBattery(last_service_date=last_service_date, current_date=current_date)
++
++#         return Car(engine=engine, battery=battery)
++
++#     @staticmethod
++#     def create_rorschach(current_date, last_service_date, current_mileage, last_service_mileage):
++#         engine = WilloughbyEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++#         battery = NubbinBattery(last_service_date=last_service_date, current_date=current_date)
++
++#         return Car(engine=engine, battery=battery)
++
++#     @staticmethod
++#     def create_thovex(current_date, last_service_date, current_mileage, last_service_mileage):
++#         engine = CapuletEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++#         battery = NubbinBattery(last_service_date=last_service_date, current_date=current_date)
++
++#         return Car(engine=engine, battery=battery)
++
++from battery_module.model.nubbin_battery import NubbinBattery
++from battery_module.model.spindler_battery import SpindlerBattery
++from car_module.car import Car
++from engine_module.model.capulet_engine import CapuletEngine
++from engine_module.model.sternman_engine import SternmanEngine
++from engine_module.model.willoughby_engine import WilloughbyEngine
++
++class CarFactory:
++
++    @staticmethod
++    def create_calliope(current_date, last_service_date, current_mileage, last_service_mileage):
++        engine = CapuletEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++        battery = SpindlerBattery(last_service_date=last_service_date, current_date=current_date)
++
++        return Car(engine=engine, battery=battery)
++
++    @staticmethod
++    def create_glissade(current_date, last_service_date, current_mileage, last_service_mileage):
++        engine = WilloughbyEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++        battery = SpindlerBattery(last_service_date=last_service_date, current_date=current_date)
++
++        return Car(engine=engine, battery=battery)
++
++    @staticmethod
++    def create_palindrome(current_date, last_service_date, warning_light_on):
++        engine = SternmanEngine(warning_light_on=warning_light_on)
++        battery = SpindlerBattery(last_service_date=last_service_date, current_date=current_date)
++
++        return Car(engine=engine, battery=battery)
++
++    @staticmethod
++    def create_rorschach(current_date, last_service_date, current_mileage, last_service_mileage):
++        engine = WilloughbyEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++        battery = NubbinBattery(last_service_date=last_service_date, current_date=current_date)
++
++        return Car(engine=engine, battery=battery)
++
++    @staticmethod
++    def create_thovex(current_date, last_service_date, current_mileage, last_service_mileage):
++        engine = CapuletEngine(current_mileage=current_mileage, last_service_mileage=last_service_mileage)
++        battery = NubbinBattery(last_service_date=last_service_date, current_date=current_date)
++
++        return Car(engine=engine, battery=battery)
+diff --git a/engine/__init__.py b/engine/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/engine/capulet_engine.py b/engine/capulet_engine.py
+deleted file mode 100644
+index 69a2f33..0000000
+--- a/engine/capulet_engine.py
++++ /dev/null
+@@ -1,13 +0,0 @@
+-from abc import ABC
+-
+-from car import Car
+-
+-
+-class CapuletEngine(Car, ABC):
+-    def __init__(self, last_service_date, current_mileage, last_service_mileage):
+-        super().__init__(last_service_date)
+-        self.current_mileage = current_mileage
+-        self.last_service_mileage = last_service_mileage
+-
+-    def engine_should_be_serviced(self):
+-        return self.current_mileage - self.last_service_mileage > 30000
+diff --git a/engine/model/__init__.py b/engine/model/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/engine/model/calliope.py b/engine/model/calliope.py
+deleted file mode 100644
+index 1dd3da5..0000000
+--- a/engine/model/calliope.py
++++ /dev/null
+@@ -1,12 +0,0 @@
+-from datetime import datetime
+-
+-from engine.capulet_engine import CapuletEngine
+-
+-
+-class Calliope(CapuletEngine):
+-    def needs_service(self):
+-        service_threshold_date = self.last_service_date.replace(year=self.last_service_date.year + 2)
+-        if service_threshold_date < datetime.today().date() or self.engine_should_be_serviced():
+-            return True
+-        else:
+-            return False
+diff --git a/engine/model/glissade.py b/engine/model/glissade.py
+deleted file mode 100644
+index e1b16ad..0000000
+--- a/engine/model/glissade.py
++++ /dev/null
+@@ -1,12 +0,0 @@
+-from datetime import datetime
+-
+-from engine.willoughby_engine import WilloughbyEngine
+-
+-
+-class Glissade(WilloughbyEngine):
+-    def needs_service(self):
+-        service_threshold_date = self.last_service_date.replace(year=self.last_service_date.year + 2)
+-        if service_threshold_date < datetime.today().date() or self.engine_should_be_serviced():
+-            return True
+-        else:
+-            return False
+diff --git a/engine/model/palindrome.py b/engine/model/palindrome.py
+deleted file mode 100644
+index 590864b..0000000
+--- a/engine/model/palindrome.py
++++ /dev/null
+@@ -1,12 +0,0 @@
+-from datetime import datetime
+-
+-from engine.sternman_engine import SternmanEngine
+-
+-
+-class Palindrome(SternmanEngine):
+-    def needs_service(self):
+-        service_threshold_date = self.last_service_date.replace(year=self.last_service_date.year + 4)
+-        if service_threshold_date < datetime.today().date() or self.engine_should_be_serviced():
+-            return True
+-        else:
+-            return False
+diff --git a/engine/model/rorschach.py b/engine/model/rorschach.py
+deleted file mode 100644
+index b9eedc9..0000000
+--- a/engine/model/rorschach.py
++++ /dev/null
+@@ -1,12 +0,0 @@
+-from datetime import datetime
+-
+-from engine.willoughby_engine import WilloughbyEngine
+-
+-
+-class Rorschach(WilloughbyEngine):
+-    def needs_service(self):
+-        service_threshold_date = self.last_service_date.replace(year=self.last_service_date.year + 4)
+-        if service_threshold_date < datetime.today().date() or self.engine_should_be_serviced():
+-            return True
+-        else:
+-            return False
+diff --git a/engine/model/thovex.py b/engine/model/thovex.py
+deleted file mode 100644
+index eac5707..0000000
+--- a/engine/model/thovex.py
++++ /dev/null
+@@ -1,12 +0,0 @@
+-from datetime import datetime
+-
+-from engine.capulet_engine import CapuletEngine
+-
+-
+-class Thovex(CapuletEngine):
+-    def needs_service(self):
+-        service_threshold_date = self.last_service_date.replace(year=self.last_service_date.year + 4)
+-        if service_threshold_date < datetime.today().date() or self.engine_should_be_serviced():
+-            return True
+-        else:
+-            return False
+diff --git a/engine/sternman_engine.py b/engine/sternman_engine.py
+deleted file mode 100644
+index 72d8b5a..0000000
+--- a/engine/sternman_engine.py
++++ /dev/null
+@@ -1,15 +0,0 @@
+-from abc import ABC
+-
+-from car import Car
+-
+-
+-class SternmanEngine(Car, ABC):
+-    def __init__(self, last_service_date, warning_light_is_on):
+-        super().__init__(last_service_date)
+-        self.warning_light_is_on = warning_light_is_on
+-
+-    def engine_should_be_serviced(self):
+-        if self.warning_light_is_on:
+-            return True
+-        else:
+-            return False
+diff --git a/engine/willoughby_engine.py b/engine/willoughby_engine.py
+deleted file mode 100644
+index e5e0dc5..0000000
+--- a/engine/willoughby_engine.py
++++ /dev/null
+@@ -1,13 +0,0 @@
+-from abc import ABC
+-
+-from car import Car
+-
+-
+-class WilloughbyEngine(Car, ABC):
+-    def __init__(self, last_service_date, current_mileage, last_service_mileage):
+-        super().__init__(last_service_date)
+-        self.current_mileage = current_mileage
+-        self.last_service_mileage = last_service_mileage
+-
+-    def engine_should_be_serviced(self):
+-        return self.current_mileage - self.last_service_mileage > 60000
+diff --git a/engine_module/engine.py b/engine_module/engine.py
+new file mode 100644
+index 0000000..01854ad
+--- /dev/null
++++ b/engine_module/engine.py
+@@ -0,0 +1,6 @@
++from abc import ABC, abstractmethod
++
++class Engine(ABC):
++    @abstractmethod
++    def needs_service(self):
++        pass
+\ No newline at end of file
+diff --git a/engine_module/model/capulet_engine.py b/engine_module/model/capulet_engine.py
+new file mode 100644
+index 0000000..3397890
+--- /dev/null
++++ b/engine_module/model/capulet_engine.py
+@@ -0,0 +1,10 @@
++
++from engine_module.engine import Engine
++
++class CapuletEngine(Engine):
++    def __init__(self, current_mileage, last_service_mileage):
++        self.last_service_milage = last_service_mileage
++        self.current_mileage = current_mileage
++    
++    def needs_service(self):
++        return self.current_mileage - self.last_service_milage > 30000
+\ No newline at end of file
+diff --git a/engine_module/model/sternman_engine.py b/engine_module/model/sternman_engine.py
+new file mode 100644
+index 0000000..d07c55b
+--- /dev/null
++++ b/engine_module/model/sternman_engine.py
+@@ -0,0 +1,9 @@
++from engine_module.engine import Engine
++
++
++class SternmanEngine(Engine):
++    def __init__(self, warning_light_on):
++        self.warning_light_on = warning_light_on
++
++    def needs_service(self):
++        return self.warning_light_on
+\ No newline at end of file
+diff --git a/engine_module/model/willoughby_engine.py b/engine_module/model/willoughby_engine.py
+new file mode 100644
+index 0000000..b012804
+--- /dev/null
++++ b/engine_module/model/willoughby_engine.py
+@@ -0,0 +1,9 @@
++from engine_module.engine import Engine
++
++class WilloughbyEngine(Engine):
++    def __init__(self, current_mileage, last_service_mileage):
++        self.last_service_mileage = last_service_mileage
++        self.current_mileage = current_mileage
++    
++    def needs_service(self):
++        return self.current_mileage - self.last_service_mileage > 60000
+\ No newline at end of file
+diff --git a/service_module/serviceable.py b/service_module/serviceable.py
+new file mode 100644
+index 0000000..2b0644e
+--- /dev/null
++++ b/service_module/serviceable.py
+@@ -0,0 +1,7 @@
++from abc import ABC, abstractmethod
++
++class Serviceable(ABC):
++    @abstractmethod
++    def needs_service(self) -> bool:
++        """Returns True if engine needs service, otherwise False"""
++        pass
+\ No newline at end of file
+diff --git a/test_main.py b/test_main.py
+new file mode 100644
+index 0000000..a0b4f03
+--- /dev/null
++++ b/test_main.py
+@@ -0,0 +1,31 @@
++# Import the necessary classes from your modules
++from car_module.car_fcatory import CarFactory
++from datetime import date
++
++def run_tests():
++    # Test creating a Calliope car
++    print("Testing Calliope...")
++    calliope_car = CarFactory.create_calliope(
++        current_date=date(2024, 8, 26),
++        last_service_date=date(2023, 8, 26),
++        current_mileage=55000,
++        last_service_mileage=20000
++    )
++    
++    # Check if the car needs service
++    print(f"Calliope needs service: {calliope_car.needs_service()}")
++
++    # Test creating a Rorschach car
++    print("\nTesting Rorschach...")
++    rorschach_car = CarFactory.create_rorschach(
++        current_date=date(2024, 8, 26),
++        current_mileage=75000,
++        last_service_date=date(2020, 8, 26),
++        last_service_mileage=35000
++    )
++
++    # Check if the car needs service
++    print(f"Rorschach needs service: {rorschach_car.needs_service()}")
++
++if __name__ == "__main__":
++    run_tests()
+-- 
+2.43.0.windows.1
+
